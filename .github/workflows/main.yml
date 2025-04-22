@@ -1,4 +1,4 @@
-name: Run Script
+name: Say_Hello
 
 on:
   push:
@@ -13,6 +13,5 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Run script
-        run: bash scripts/script.sh
-
+      - name: Greeting message
+        run: echo "Hello, world"
