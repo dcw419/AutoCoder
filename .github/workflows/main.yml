@@ -14,17 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check Issue and Print Info
+      - name: Set environment variables and Print Issue Info
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ', ') }}
+          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
         run: |
-          if [ -z "${{ github.event.issue.number }}" ]; then
-            echo "No open issues found."
-          else
-            echo "Issue Number: ${{ github.event.issue.number }}"
-            echo "Issue Title: ${{ github.event.issue.title }}"
-            echo "Issue Body: ${{ github.event.issue.body }}"
-            echo "Issue Assignees: ${{ join(github.event.issue.assignees.*.login, ', ') }}"
-            echo "Issue Labels: ${{ join(github.event.issue.labels.*.name, ', ') }}"
-          fi
+          echo "Issue Number: $ISSUE_NUMBER"
+          echo "Issue Title: $ISSUE_TITLE"
+          echo "Issue Body: $ISSUE_BODY"
+          echo "Issue Assignees: $ISSUE_ASSIGNEES"
+          echo "Issue Labels: $ISSUE_LABELS"
 
           echo "Issue Assignees: ${ISSUE_ASSIGNEES}"
           echo "Issue Labels: ${ISSUE_LABELS}"
