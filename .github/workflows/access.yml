@@ -29,5 +29,3 @@ jobs:
           echo "Issue Assignees: ${ISSUE_ASSIGNEES}"
           echo "Issue Labels: ${ISSUE_LABELS}"
 
-          ISSUE_RESPONSE=$(curl -s https://api.github.com/repos/${REPOSITORY}/issues/${ISSUE_NUMBER})
-          echo "Issue Information: ${ISSUE_RESPONSE}"
