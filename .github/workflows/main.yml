@@ -6,17 +6,17 @@ on:
 
 jobs:
   run-autocoder:
+    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Set permissions for script.sh
+      - name: Make script executable
         run: chmod +x scripts/script.sh
 
-      - name: Run script.sh
-        if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
+      - name: Run Autocoder Script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
@@ -25,7 +25,6 @@ jobs:
         run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$DEEPSEEK_API_KEY"
 
       - name: Upload generated files as artifact
-        if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
         uses: actions/upload-artifact@v4
         with:
           name: autocoder-artifact
@@ -41,5 +40,5 @@ jobs:
           name: autocoder-artifact
           path: autocoder-artifact
 
-      - name: List files in the artifact
+      - name: List files
         run: ls -R autocoder-artifact
