@@ -3,7 +3,7 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
-# log every command
+# Log every command
 set -x
 
 # Get inputs from the environment
@@ -45,10 +45,10 @@ if [[ -z "$ISSUE_BODY" ]]; then
     exit 1
 fi
 
-# Define clear, additional instructions for DeepSeek regarding the response format
+# Define additional instructions
 INSTRUCTIONS="Based on the description below, please generate a JSON object where the keys represent file paths and the values are the corresponding code snippets for a production-ready application. The response should be a valid strictly JSON object without any additional formatting, markdown, or characters outside the JSON structure."
 
-# Combine the instructions with the issue body to form the full prompt
+# Combine instructions with issue body
 FULL_PROMPT="$INSTRUCTIONS\n\n$ISSUE_BODY"
 
 # Prepare the messages array for the DeepSeek API
@@ -63,7 +63,10 @@ if [[ -z "$RESPONSE" ]]; then
 fi
 
 # Extract the JSON dictionary from the response
-FILES_JSON=$(echo "$RESPONSE" | jq -e '.choices[0].message.content | fromjson' 2> /dev/null)
+RAW_CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+CLEANED_CONTENT=$(echo "$RAW_CONTENT" | sed -e 's/^```json//' -e 's/^```//' -e 's/```$//')
+
+FILES_JSON=$(echo "$CLEANED_CONTENT" | jq -e '.' 2> /dev/null)
 
 if [[ -z "$FILES_JSON" ]]; then
     echo "No valid JSON dictionary found in the response or the response was not valid JSON. Please rerun the job."
@@ -74,7 +77,7 @@ fi
 for key in $(echo "$FILES_JSON" | jq -r 'keys[]'); do
     FILENAME=$key
     CODE_SNIPPET=$(echo "$FILES_JSON" | jq -r --arg key "$key" '.[$key]')
-    CODE_SNIPPET=$(echo "$CODE_SNIPPET" | sed 's/\r$//') # Normalize line endings
+    CODE_SNIPPET=$(echo "$CODE_SNIPPET" | sed 's/\r$//')
     save_to_file "$FILENAME" "$CODE_SNIPPET"
 done
 
