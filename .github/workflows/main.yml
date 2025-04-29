@@ -15,6 +15,13 @@ jobs:
 
       - name: Make script executable
         run: chmod +x ./scripts/script.sh
+      - name: Verify script format and permissions
+        run: |
+            file scripts/script.sh
+            echo "--------------------"
+            cat -A scripts/script.sh
+            echo "--------------------"
+            ls -l scripts/
 
       - name: Run Autocoder Script
         env:
