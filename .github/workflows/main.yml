@@ -21,7 +21,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
         
       - name: Make script executable
-        run: chmod +x scripts/gpt_interaction_script.sh
+        run: chmod +x scripts/script.sh
 
 
       - name: Run GPT Interaction Script
