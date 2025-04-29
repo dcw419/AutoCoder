@@ -1,5 +1,10 @@
 name: Autocoder Bot
 
+permissions:
+  contents: read
+  issues: read
+
+
 on:
   issues:
     types: [opened, reopened, labeled]
