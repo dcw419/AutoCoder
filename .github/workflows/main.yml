@@ -2,30 +2,30 @@ name: Autocoder Bot
 
 on:
   issues:
-    types: [opened, labeled, reopened]
+    types: [opened, reopened, labeled]
 
 jobs:
   run-autocoder:
-    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Make script executable
+      - name: Set permissions for script.sh
         run: chmod +x scripts/script.sh
 
-      - name: Run Autocoder Script
+      - name: Run script.sh
+        if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$DEEPSEEK_API_KEY"
+        run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$DEEPSEEK_API_KEY"
 
       - name: Upload generated files as artifact
+        if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
         uses: actions/upload-artifact@v4
         with:
           name: autocoder-artifact
@@ -41,5 +41,5 @@ jobs:
           name: autocoder-artifact
           path: autocoder-artifact
 
-      - name: List files
+      - name: List files in the artifact
         run: ls -R autocoder-artifact
