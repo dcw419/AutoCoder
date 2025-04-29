@@ -1,32 +1,30 @@
-name: Access Issue Information
+name: Autocoder Bot
 
 on:
   issues:
-    types:
-      - opened
-      - reopened
+    types: [opened]
 
 jobs:
-  access_issue_info:
+  run-autocoder:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Set environment variables and Print Issue Info
-        env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
-          ISSUE_ASSIGNEES: ${{ join(github.event.issue.assignees.*.login, ', ') }}
-          ISSUE_LABELS: ${{ join(github.event.issue.labels.*.name, ', ') }}
+      - name: Set up environment variables
         run: |
-          echo "Issue Number: $ISSUE_NUMBER"
-          echo "Issue Title: $ISSUE_TITLE"
-          echo "Issue Body: $ISSUE_BODY"
-          echo "Issue Assignees: $ISSUE_ASSIGNEES"
-          echo "Issue Labels: $ISSUE_LABELS"
+          echo "REPOSITORY=${{ github.repository }}" >> $GITHUB_ENV
+          echo "ISSUE_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
 
-          echo "Issue Assignees: ${ISSUE_ASSIGNEES}"
-          echo "Issue Labels: ${ISSUE_LABELS}"
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run GPT Interaction Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          REPOSITORY: ${{ env.REPOSITORY }}
+          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+        run: |
+          bash ./gpt_interaction_script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$OPENAI_API_KEY"
