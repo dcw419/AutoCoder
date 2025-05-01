@@ -2,7 +2,7 @@ name: AutoCoder Workflow
 
 on:
   issues:
-    types: [opened, labeled]
+    types: [opened, labeled, reopened]
 
 jobs:
   generate-code:
