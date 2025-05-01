@@ -7,7 +7,7 @@ set -x
 GITHUB_TOKEN="$1"
 REPOSITORY="$2"
 ISSUE_NUMBER="$3"
-OPENAI_API_KEY="$4"  # This can be DeepSeek's key
+DEEPSEEK_API_KEY="$4"  # This can be DeepSeek's key
 
 # Check required arguments
 if [ -z "$GITHUB_TOKEN" ] || [ -z "$REPOSITORY" ] || [ -z "$ISSUE_NUMBER" ] || [ -z "$OPENAI_API_KEY" ]; then
