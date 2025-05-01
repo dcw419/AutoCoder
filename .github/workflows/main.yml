@@ -13,15 +13,21 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Make script executable
-        run: chmod +x script.sh
+        run: chmod +x scripts/script.sh
+
+      - name: Install jq (JSON processor)
+        run: sudo apt-get install -y jq
 
       - name: Generate Code with ChatGPT
         env:
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          REPO: ${{ github.repository }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: ./script.sh
+        run: |
+          ./scripts/script.sh \
+            "$GITHUB_TOKEN" \
+            "${{ github.repository }}" \
+            "${{ github.event.issue.number }}" \
+            "$OPENAI_API_KEY"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
@@ -39,5 +45,5 @@ jobs:
           name: autocoder-artifact
           path: autocoder-artifact
 
-      - name: List Files
+      - name: List Generated Files
         run: ls -R autocoder-artifact
