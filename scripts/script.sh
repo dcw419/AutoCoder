@@ -1,84 +1,78 @@
 #!/bin/bash
-
-# Exit immediately if a command exits with a non-zero status.
 set -e
-
-# log every command
 set -x
 
-# Get inputs from the environment
+# 获取输入参数
 GITHUB_TOKEN="$1"
 REPOSITORY="$2"
 ISSUE_NUMBER="$3"
-OPENAI_API_KEY="$4"
+DEEPSEEK_API_KEY="$4"
 
-# Function to fetch issue details from GitHub API
+# 获取issue内容函数
 fetch_issue_details() {
     curl -s -H "Authorization: token $GITHUB_TOKEN" \
          "https://api.github.com/repos/$REPOSITORY/issues/$ISSUE_NUMBER"
 }
 
-# Function to send prompt to the ChatGPT model (OpenAI API)
-send_prompt_to_chatgpt() {
-curl -s -X POST "https://api.openai.com/v1/chat/completions" \
-    -H "Authorization: Bearer $OPENAI_API_KEY" \
+# 调用DeepSeek API函数
+send_prompt_to_deepseek() {
+    curl --retry 3 --retry-delay 2 -s -X POST "https://api.deepseek.com/v1/chat/completions" \
+    -H "Authorization: Bearer $DEEPSEEK_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"model\": \"gpt-3.5-turbo\", \"messages\": $MESSAGES_JSON, \"max_tokens\": 500}"
+    -d "{
+      \"model\": \"deepseek-coder-33b-instruct\",
+      \"messages\": $MESSAGES_JSON,
+      \"temperature\": 0.3,
+      \"max_tokens\": 2000,
+      \"top_p\": 0.95
+    }"
 }
 
-
-# Function to save code snippet to file
+# 保存文件函数
 save_to_file() {
-    #  the script will save the code snippets to files in a directory named "autocoder-bot" with the filename specified in the JSON object.
     local filename="autocoder-bot/$1"
     local code_snippet="$2"
-
     mkdir -p "$(dirname "$filename")"
     echo -e "$code_snippet" > "$filename"
-    echo "The code has been written to $filename"
+    echo "Generated: $filename"
 }
 
-# Fetch and process issue details
+# 主流程
 RESPONSE=$(fetch_issue_details)
 ISSUE_BODY=$(echo "$RESPONSE" | jq -r .body)
 
-if [[ -z "$ISSUE_BODY" ]]; then
-    echo 'Issue body is empty or not found in the response.'
-    exit 1
-fi
+[ -z "$ISSUE_BODY" ] && { echo "Empty issue body"; exit 1; }
 
-# Define clear, additional instructions for GPT regarding the response format
-INSTRUCTIONS="Based on the description below, please generate a JSON object where the keys represent file paths and the values are the corresponding code snippets for a production-ready application. The response should be a valid strictly JSON object without any additional formatting, markdown, or characters outside the JSON structure."
-
-# Combine the instructions with the issue body to form the full prompt
+INSTRUCTIONS="Generate a JSON object with file paths as keys and production-ready code as values. Response must be pure JSON without markdown."
 FULL_PROMPT="$INSTRUCTIONS\n\n$ISSUE_BODY"
 
-# Prepare the messages array for the ChatGPT API, including the instructions
 MESSAGES_JSON=$(jq -n --arg body "$FULL_PROMPT" '[{"role": "user", "content": $body}]')
 
-# Send the prompt to the ChatGPT model
-RESPONSE=$(send_prompt_to_chatgpt)
-
-if [[ -z "$RESPONSE" ]]; then
-    echo "No response received from the OpenAI API."
+# 调用API并处理错误
+RESPONSE=$(send_prompt_to_deepseek)
+if [ -z "$RESPONSE" ]; then
+    echo "API request failed"
     exit 1
 fi
 
-# Extract the JSON dictionary from the response
-# Make sure that the extracted content is valid JSON
-FILES_JSON=$(echo "$RESPONSE" | jq -e '.choices[0].message.content | fromjson' 2> /dev/null)
-
-if [[ -z "$FILES_JSON" ]]; then
-    echo "No valid JSON dictionary found in the response or the response was not valid JSON. Please rerun the job."
+# 错误处理增强
+API_ERROR=$(echo "$RESPONSE" | jq -r '.error.message // empty')
+if [ -n "$API_ERROR" ]; then
+    echo "DeepSeek API Error: $API_ERROR"
     exit 1
 fi
 
-# Iterate over each key-value pair in the JSON dictionary
-for key in $(echo "$FILES_JSON" | jq -r 'keys[]'); do
-    FILENAME=$key
-    CODE_SNIPPET=$(echo "$FILES_JSON" | jq -r --arg key "$key" '.[$key]')
-    CODE_SNIPPET=$(echo "$CODE_SNIPPET" | sed 's/\r$//') # Normalize line endings
-    save_to_file "$FILENAME" "$CODE_SNIPPET"
+# 提取并验证JSON
+FILES_JSON=$(echo "$RESPONSE" | jq -e '.choices[0].message.content | fromjson')
+if [ $? -ne 0 ]; then
+    echo "Invalid JSON response"
+    echo "Raw response: $RESPONSE"
+    exit 1
+fi
+
+# 生成文件
+echo "$FILES_JSON" | jq -r 'to_entries[] | "\(.key)\n\(.value)"' | while read -r key && read -r value; do
+    save_to_file "$key" "$value"
 done
 
-echo "All files have been processed successfully."
+echo "All files generated successfully"
