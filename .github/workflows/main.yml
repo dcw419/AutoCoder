@@ -1,56 +1,48 @@
-name: DeepSeek AutoCoder
+name: Autocoder Bot
+
+permissions:
+  contents: read
+  issues: read
 
 on:
   issues:
-    types: [opened, labeled, reopened]
+    types: [opened, reopened, labeled]
 
 jobs:
-  code-generation:
-    name: Generate Code with DeepSeek
-    if: |
-      contains(github.event.issue.labels.*.name, 'autocoder-bot') &&
-      (github.event.action == 'opened' || 
-       github.event.action == 'labeled' || 
-       github.event.action == 'reopened')
+  run-autocoder:
+    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-      issues: read
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout the repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment
-        run: |
-          chmod +x ./scripts/script.sh
-          sudo apt-get update
-          sudo apt-get install -y jq
+      - name: Make script executable
+        run: chmod +x scripts/script.sh
 
-      - name: Run DeepSeek AutoCoder
+      - name: Run script.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: |
-          ./scripts/script.sh \
-            "$GITHUB_TOKEN" \
-            "$REPOSITORY" \
-            "$ISSUE_NUMBER" \
-            "$DEEPSEEK_API_KEY"
+        run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$OPENAI_API_KEY"
 
-      - name: Upload Artifacts
+      - name: Upload generated files as artifact
         uses: actions/upload-artifact@v4
         with:
           name: autocoder-artifact
-          path: |
-            autocoder-bot/**
-          retention-days: 3
+          path: autocoder-bot/
 
-      - name: Verify Artifacts
-        run: |
-          echo "Generated files structure:"
-          find autocoder-bot -type f -print
-          [ -d "autocoder-bot" ] || { echo "No files generated!"; exit 1; }
+  download-and-list:
+    needs: run-autocoder
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: autocoder-artifact
+          path: autocoder-artifact
+
+      - name: List files
+        run: ls -R autocoder-artifact
