@@ -1,48 +1,54 @@
-name: AutoCoder Workflow
+name: DeepSeek AutoCoder
 
 on:
   issues:
     types: [opened, labeled, reopened]
 
 jobs:
-  generate-code:
+  code-generation:
+    name: Generate Code with DeepSeek
     if: |
       contains(github.event.issue.labels.*.name, 'autocoder-bot') &&
       (github.event.action == 'opened' || github.event.action == 'labeled')
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      issues: read
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Script Permissions
-        run: chmod +x ./scripts/script.sh
+      - name: Setup Environment
+        run: |
+          chmod +x ./scripts/script.sh
+          sudo apt-get update
+          sudo apt-get install -y jq
 
-      - name: Install jq
-        run: sudo apt-get install jq -y
-
-      - name: Generate Code with ChatGPT
+      - name: Run DeepSeek AutoCoder
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$OPENAI_API_KEY"
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          ./scripts/script.sh \
+            "$GITHUB_TOKEN" \
+            "$REPOSITORY" \
+            "$ISSUE_NUMBER" \
+            "$DEEPSEEK_API_KEY"
 
-      - name: Upload Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: autocoder-artifact
-          path: autocoder-bot/
-          retention-days: 1
+          path: |
+            autocoder-bot/**
+          retention-days: 3
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: autocoder-artifact
-          path: autocoder-artifact/
-
-      - name: List Generated Files
+      - name: Verify Artifacts
         run: |
           echo "Generated files structure:"
-          ls -R autocoder-artifact
+          find autocoder-bot -type f -print
+          [ -d "autocoder-bot" ] || { echo "No files generated!"; exit 1; }
