@@ -1,49 +1,48 @@
-name: Autocoder Bot
+name: AutoCoder Workflow
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, labeled]
 
 jobs:
   generate-code:
-    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
+    if: |
+      contains(github.event.issue.labels.*.name, 'autocoder-bot') &&
+      (github.event.action == 'opened' || github.event.action == 'labeled')
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Make script executable
-        run: chmod +x scripts/script.sh
+      - name: Setup Script Permissions
+        run: chmod +x ./scripts/script.sh
 
-      - name: Install jq (JSON processor)
-        run: sudo apt-get install -y jq
+      - name: Install jq
+        run: sudo apt-get install jq -y
 
       - name: Generate Code with ChatGPT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          ./scripts/script.sh \
-            "$GITHUB_TOKEN" \
-            "${{ github.repository }}" \
-            "${{ github.event.issue.number }}" \
-            "$OPENAI_API_KEY"
+        run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$OPENAI_API_KEY"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: autocoder-artifact
           path: autocoder-bot/
+          retention-days: 1
 
-  display-artifact:
-    needs: generate-code
-    runs-on: ubuntu-latest
-    steps:
       - name: Download Artifact
         uses: actions/download-artifact@v3
         with:
           name: autocoder-artifact
-          path: autocoder-artifact
+          path: autocoder-artifact/
 
       - name: List Generated Files
-        run: ls -R autocoder-artifact
+        run: |
+          echo "Generated files structure:"
+          ls -R autocoder-artifact
