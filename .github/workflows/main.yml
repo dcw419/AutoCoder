@@ -2,14 +2,16 @@ name: DeepSeek AutoCoder
 
 on:
   issues:
-    types: [opened, labeled, reopened]
+    types: [opened, labeled, reopened]  # 添加 reopened 事件
 
 jobs:
   code-generation:
     name: Generate Code with DeepSeek
     if: |
       contains(github.event.issue.labels.*.name, 'autocoder-bot') &&
-      (github.event.action == 'opened' || github.event.action == 'labeled')
+      (github.event.action == 'opened' || 
+       github.event.action == 'labeled' || 
+       github.event.action == 'reopened')  # 更新条件判断
     runs-on: ubuntu-latest
 
     permissions:
