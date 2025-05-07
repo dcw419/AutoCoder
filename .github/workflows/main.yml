@@ -26,9 +26,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          REPOSITORY: ${{ github.repository }}
+          REPO: ${{ github.repository }}
           OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        run: ./scripts/script.sh "$GITHUB_TOKEN" "$REPOSITORY" "$ISSUE_NUMBER" "$OPENAI_API_KEY"
+        run: ./scripts/script.sh $ISSUE_NUMBER $REPO $OPENAI_API_KEY
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
