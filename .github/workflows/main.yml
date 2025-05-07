@@ -1,45 +1,48 @@
-name: generate-code
+
+name: Access Issue Information and Generate Code
 
 on:
   issues:
     types: [opened, reopened, labeled]
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
-  run-autocoder:
-    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
+  process_issue:
     runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'autocoder-bot')
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set permissions for script.sh
-        run: chmod +x scripts/script.sh
+      - name: Make Script Executable
+        run: chmod +x ./scripts/script.sh
 
-      - name: Run script.sh
+      - name: Generate Code with ChatGPT
+        id: generate_code
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          REPOSITORY: ${{ github.repository }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          scripts/script.sh \
-            "$GITHUB_TOKEN" \
-            "$REPOSITORY" \
-            "$ISSUE_NUMBER" \
-            "$OPENAI_API_KEY"
+          REPO: ${{ github.repository }}
+          OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: ./scripts/script.sh $ISSUE_NUMBER $REPO $OPENAI_API_KEY
 
-      - name: Upload generated files as artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: autocoder-artifact
           path: autocoder-bot/
 
-      - name: Download artifacts
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: autocoder-artifact
-          path: autocoder-artifact/
+          path: autocoder-artifact
 
-      - name: List files in the artifact
-        run: ls -R autocoder-artifact/
+      - name: List Files Recursively
+        run: |
+          echo "Listing all files in autocoder-artifact directory:"
+          ls -R autocoder-artifact/

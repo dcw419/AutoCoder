@@ -1,0 +1,56 @@
+name: Autocoder Pull Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'GitHub Issue Number'
+        required: true
+        type: string
+
+jobs:
+  autocoder:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    env:
+      ISSUE_NUMBER: ${{ github.event.inputs.issue_number }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Make script executable
+        run: chmod +x scripts/script.sh
+
+      - name: 🧠 Run the code generation script
+        run: ./scripts/script.sh
+        env:
+          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+          API_KEY: ${{ secrets.API_KEY }}  # 可选，如果你的脚本用到了 API 密钥
+
+      - name: 🧾 Set Git config
+        run: |
+          git config --global user.name "autocoder-bot"
+          git config --global user.email "actions@github.com"
+
+      - name: 📌 Commit and push changes
+        run: |
+          BRANCH="autocoder-branch-${ISSUE_NUMBER}"
+          git checkout -b "$BRANCH"
+          git add .
+          git commit -m "autocoder-bot: generated code for issue #${ISSUE_NUMBER}" || echo "Nothing to commit"
+          git push origin "$BRANCH"
+
+      - name: 📬 Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: autocoder-branch-${{ env.ISSUE_NUMBER }}
+          base: main
+          title: "autocoder-bot: PR for issue #${{ env.ISSUE_NUMBER }}"
+          body: |
+            This PR was automatically generated for issue #${{ env.ISSUE_NUMBER }}
+          labels: autocoder-bot
