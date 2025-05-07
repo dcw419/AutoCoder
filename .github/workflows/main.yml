@@ -24,6 +24,7 @@ jobs:
       - name: Generate Code with ChatGPT
         id: generate_code
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
